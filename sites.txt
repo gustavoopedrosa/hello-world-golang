@@ -1,0 +1,8 @@
+https://httpstat.us/200
+https://httpstat.us/404
+https://alura.com.br
+https://httpstat.us/500
+https://httpstat.us/200
+https://httpstat.us/404
+https://alura.com.br
+https://httpstat.us/500

@@ -1,9 +1,14 @@
 package main // indica que é o pacote principal e que o programa deve começar por ele
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http" // pacote para intereções http
 	"os"       // pacote para intereção com o sistema operacional
+	"strconv"  // pacote para conversão para string
+	"strings"
 	"time"
 )
 
@@ -46,7 +51,7 @@ func main() {
 		case 1:
 			iniciarMonitoramento()
 		case 2:
-			fmt.Println("Exibindo Logs...")
+			imprimeLogs()
 		case 0:
 			fmt.Println("Saindo do programa...")
 			os.Exit(0)
@@ -93,7 +98,7 @@ func iniciarMonitoramento() {
 	fmt.Println("Monitorando...")
 	fmt.Println("")
 
-	sites := []string{"https://httpstat.us/200", "https://httpstat.us/404", "https://alura.com.br", "https://httpstat.us/500"}
+	sites := leSitesDoArquivo()
 
 	// podemos percorrer o slice com o "for" tradicional:
 	// for i := 0; i < len(sites); i++  // utilizo o "i" para cada item do slice
@@ -120,13 +125,86 @@ func testaSite(site string) {
 	// resp, err := http.Get(site)
 
 	// Ou ignorar um dos valores com underline ao invés do nome da variável, assim:
-	resp, _ := http.Get(site)
+	resp, err := http.Get(site)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro durante a requisição:", err)
+	}
 
 	if resp.StatusCode == 200 {
 		fmt.Println("Site:", site, "foi carregado com sucesso!")
+		registraLog(site, true)
 	} else {
 		fmt.Println("Site:", site, "esta com problemas. Status Code", resp.StatusCode)
+		registraLog(site, false)
 	}
+}
+
+func leSitesDoArquivo() []string {
+	var sites []string
+
+	// Com os.Open() irá retornar o apontamento para memória desse arquivo
+	arquivo, err := os.Open("sites.txt")
+
+	// Com ioutil.ReadFile() vai retornar um array de bytes
+	// arquivo, err := ioutil.ReadFile("sites.txt")
+	// depois pode ser lido assim:
+	// string(arquivo)
+
+	if err != nil {
+		fmt.Println("Ocorreu um erro durante a abertura do arquivo:", err)
+	}
+
+	// Cria uma nova instancia de leitor do bufio
+	leitor := bufio.NewReader(arquivo)
+
+	for {
+		// Define a leitura até encontrar o primeiro byte de \n
+		// Byte específico é definido com aspas simples ''
+		linha, error := leitor.ReadString('\n')
+		linha = strings.TrimSpace(linha)
+
+		sites = append(sites, linha)
+
+		if error == io.EOF {
+			break
+		}
+	}
+
+	// É uma boa prática fechar o arquivo no final da função em que ele é aberto
+	arquivo.Close()
+
+	return sites
+}
+
+func registraLog(site string, status bool) {
+	// os.OpenFile() da mais opções para tratar os arquivos, como o "os.O_RDWR" que permite a leitura e escrita
+	// e o "os.O_CREATE" que permite a criação do arquivo caso não exista
+	// A flag "os.O_APPEND" permite a adição de novas linhas, ao invés de escrever a partir do começo do arquivo
+	arquivo, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+
+	if err != nil {
+		fmt.Println("D")
+	}
+
+	// Escreve a string passada como parâmetro
+	// Para mais infos sobre os formatos de tempo consultar a doc
+	arquivo.WriteString(time.Now().Format("02/01/2006 15:04:05") + " - " + site + " - online: " + strconv.FormatBool(status) + "\n")
+
+	arquivo.Close()
+}
+
+func imprimeLogs() {
+	fmt.Println("Exibindo Logs...")
+	fmt.Println("")
+	// Não é necessário fechar o arquivo com ioutil.ReadFile()
+	arquivo, err := ioutil.ReadFile("log.txt")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println(string(arquivo))
 }
 
 // -------------------------- Sobre Arrays e Slices
